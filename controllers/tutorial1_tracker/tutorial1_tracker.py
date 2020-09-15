@@ -34,8 +34,8 @@ class MyRobot(Robot):
         self.walk_backward = Motion('../../motions/Backwards.motion')
 
         self.motion = None
-        
-        #Face Movement
+
+        # Face Movement
         self.face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
         # Keyboard
@@ -143,24 +143,41 @@ class MyRobot(Robot):
 
             # Face following main function
 
-    def look_at(self):
-        pass
+    def look_at(self, x, y):
+        x_mov = float((x / 270) - 0.5) * 4
+        y_mov = float((y / 270) - 0.5) * 4
+        if x_mov > 2.09:
+            x_mov = 2.09
+        elif x_mov < -2.09:
+            x_mov = -2.09
+
+        if y_mov > 0.51:
+            y_mov = 0.51
+        elif y_mov < -0.67:
+            y_mov = -0.67
+
+        self.motion = robot.getMotor('HeadYaw')
+        self.motion.setPosition(x_mov)
+
+        self.motion = robot.getMotor('HeadPitch')
+        self.motion.setPosition(y_mov)
 
     def run_face_follower(self):
         # main control loop: perform simulation steps of self.timeStep milliseconds
         # and leave the loop when the simulation is over
         while self.step(self.timeStep) != -1:
-            
+
             img = self.camera_read_external()
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             faces = self.face_cascade.detectMultiScale(gray, 1.3, 5)
             for (x, y, w, h) in faces:
                 cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
-                w_half = w//2
-                h_half = h//2
-                cv2.circle(img , (x + h_half,y + w_half), 2, (0, 255, 0), -1)
-                
+                w_half = w // 2
+                h_half = h // 2
+                cv2.circle(img, (x + h_half, y + w_half), 2, (0, 255, 0), -1)
+                self.look_at(x + h_half, y + w_half)
             self.image_to_display(img)
+
         # finallize class. Destroy external camera.
         if self.ext_camera:
             self.cameraExt.release()
@@ -169,6 +186,6 @@ class MyRobot(Robot):
 
 
 robot = MyRobot(ext_camera_flag=True)
-robot.run_keyboard()
+# robot.run_keyboard()
 robot.run_face_follower()
 # robot.run_ball_follower()
