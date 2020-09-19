@@ -5,6 +5,7 @@
 from controller import Robot, Keyboard, Display, Motion, DistanceSensor
 import numpy as np
 import cv2
+import time
 
 
 class MyRobot(Robot):
@@ -32,6 +33,8 @@ class MyRobot(Robot):
         # Actuators init
         self.walk_forward = Motion('../../motions/Forwards.motion')
         self.walk_backward = Motion('../../motions/Backwards.motion')
+        self.wave_hand = Motion('../../motions/HandWave.motion')
+        self.shoot = Motion('../../motions/Shoot.motion')
 
         self.motion = None
 
@@ -144,8 +147,8 @@ class MyRobot(Robot):
             # Face following main function
 
     def look_at(self, x, y):
-        x_mov = float((x / 270) - 0.5) * 4
-        y_mov = float((y / 270) - 0.5) * 4
+        x_mov = float((x / 270) - 0.5) * 2
+        y_mov = float((y / 270) - 0.5) * 2
         if x_mov > 2.09:
             x_mov = 2.09
         elif x_mov < -2.09:
@@ -184,8 +187,22 @@ class MyRobot(Robot):
 
         # create the Robot instance and run the controller
 
+    
+    def run_greetings(self):
+    
+        while self.step(self.timeStep) != -1:
 
+            img = self.camera_read_external()
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            faces = self.face_cascade.detectMultiScale(gray, 1.3, 5)
+            self.image_to_display(img)
+            for (x,y,w,h) in faces:
+                self.wave_hand.play()
+    
+    
+    
 robot = MyRobot(ext_camera_flag=True)
-# robot.run_keyboard()
+robot.run_keyboard()
 robot.run_face_follower()
 # robot.run_ball_follower()
+robot.run_greetings()
