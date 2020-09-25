@@ -22,7 +22,7 @@ class MyRobot(Robot):
 
         self.step(self.timeStep)  # Execute one step to get the initial position
         self.cameraBottom = self.getCamera("CameraBottom")
-        self.cameraBottom.enable(2*self.timeStep)
+        self.cameraBottom.enable(2 * self.timeStep)
 
         self.ext_camera = ext_camera_flag
         self.displayCamExt = self.getDisplay('CameraExt')
@@ -48,8 +48,6 @@ class MyRobot(Robot):
         self.rightS_roll.setPosition(float('inf'))
         self.rightS_roll.setVelocity(0)
 
-       # self.motion = None
-
         # Face Movement
         self.face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
@@ -57,10 +55,11 @@ class MyRobot(Robot):
         self.keyboard.enable(self.timeStep)
         self.keyboard = self.getKeyboard()
 
-        self.currentlyPlaying = False
+        self.motion = None
         self.loadMotionFiles()
 
     def loadMotionFiles(self):
+
         self.handWave = Motion('../../motions/HandWave.motion')
         self.forwards = Motion('../../motions/Forwards50.motion')
         self.backwards = Motion('../../motions/Backwards.motion')
@@ -68,16 +67,7 @@ class MyRobot(Robot):
         self.sideStepRight = Motion('../../motions/SideStepRight.motion')
         self.turnLeft60 = Motion('../../motions/TurnLeft60.motion')
         self.turnRight60 = Motion('../../motions/TurnRight60.motion')
-
-    def startMotion(self, motion):
-        # interrupt current motion
-        if self.currentlyPlaying:
-            self.currentlyPlaying.stop()
-
-        # start new motion
-        motion.play()
-        self.currentlyPlaying = motion
-
+        self.shoot = Motion('../../motions/Shoot.motion')
 
     # Captures the external camera frames
     # Returns the image downsampled by 2
@@ -114,8 +104,15 @@ class MyRobot(Robot):
             ' Left Arrow to move head left\n'
             ' Right Arrow to move head left\n'
             ' S to Stop\n'
-            'E to exit\n'
+            ' E to exit\n'
         )
+
+    def startMotion(self, motion):
+        # start new motion
+        if self.motion:
+            self.motion.stop()
+        motion.play()
+        self.motion = motion
 
     def run_keyboard(self):
 
@@ -137,19 +134,20 @@ class MyRobot(Robot):
             elif k == Keyboard.DOWN:
                 self.startMotion(self.backwards)
             elif k == Keyboard.LEFT:
+                self.head_yaw.setPosition(float('inf'))
                 self.head_yaw.setVelocity(-1)
             elif k == Keyboard.RIGHT:
+                self.head_yaw.setPosition(float('inf'))
                 self.head_yaw.setVelocity(1.0)
             elif k == ord('L'):
                 self.startMotion(self.turnLeft60)
             elif k == ord('R'):
                 self.startMotion(self.turnRight60)
             elif k == ord('S'):
-                if self.currentlyPlaying:
-                    self.currentlyPlaying.stop()
-                    self.currentlyPlaying = False
-
+                if self.motion:
+                    self.motion.stop()
                 self.head_yaw.setVelocity(0)
+
             elif k == ord("E"):
                 return
 
@@ -165,8 +163,8 @@ class MyRobot(Robot):
             # Face following main function
 
     def look_at(self, x, y):
-        x_mov = float((x / 270) - 0.5) * 4
-        y_mov = float((y / 270) - 0.5) * 4
+        x_mov = float((x / 270) - 0.5) * 2
+        y_mov = float((y / 270) - 0.5) * 2
         if x_mov > 2.09:
             x_mov = 2.09
         elif x_mov < -2.09:
@@ -177,11 +175,13 @@ class MyRobot(Robot):
         elif y_mov < -0.67:
             y_mov = -0.67
 
-        self.motion = robot.getMotor('HeadYaw')
-        self.motion.setPosition(x_mov)
+        # self.motion = robot.getMotor('HeadYaw')
+        self.head_yaw.setVelocity(1)
+        self.head_yaw.setPosition(x_mov)
 
-        self.motion = robot.getMotor('HeadPitch')
-        self.motion.setPosition(y_mov)
+        # self.motion = robot.getMotor('HeadPitch')
+        self.head_pitch.setVelocity(1)
+        self.head_pitch.setPosition(y_mov)
 
     def run_face_follower(self):
         # main control loop: perform simulation steps of self.timeStep milliseconds
@@ -205,6 +205,17 @@ class MyRobot(Robot):
 
         # create the Robot instance and run the controller
 
+    def run_greetings(self):
+
+        while self.step(self.timeStep) != -1:
+
+            img = self.camera_read_external()
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            faces = self.face_cascade.detectMultiScale(gray, 1.3, 5)
+            self.image_to_display(img)
+            for (x, y, w, h) in faces:
+                self.startMotion(self.shoot)
+
     def run_ball_follower(self):
 
         yaw_position = 0
@@ -212,25 +223,24 @@ class MyRobot(Robot):
         self.head_yaw.setVelocity(6.5)
         self.head_pitch.setVelocity(6.5)
 
-
         while self.step(self.timeStep) != -1:
             img = self.cameraBottom.getImage()
             height, width = self.cameraBottom.getHeight(), self.cameraBottom.getWidth()
-            image = np.frombuffer(img, np.uint8).reshape( height, width,4)
+            image = np.frombuffer(img, np.uint8).reshape(height, width, 4)
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-            lower =  np.array([40,100,100])
-            upper = np.array([80,255,255])
+            lower = np.array([40, 100, 100])
+            upper = np.array([80, 255, 255])
             # mask green values
             mask = cv2.inRange(image, lower, upper)
 
-            #Erosion
-            kernel = np.ones((2,2),np.uint8)
-            image = cv2.erode(mask,kernel,iterations = 1)
-            #Dilation
-            image= cv2.dilate(image,kernel,iterations = 1)
+            # Erosion
+            kernel = np.ones((2, 2), np.uint8)
+            image = cv2.erode(mask, kernel, iterations=1)
+            # Dilation
+            image = cv2.dilate(image, kernel, iterations=1)
             # find ball contour
-            contour, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE )
+            contour, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if len(contour) != 0:
                 contour = np.asarray(contour[0])
                 m = cv2.moments(contour)
@@ -240,7 +250,7 @@ class MyRobot(Robot):
                     cx, cy = int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"])
                     # calculate movemnet for yaw and pitch
                     K = 0.2
-                    dx, dy =K*((cx/width)-0.5), K*((cy/height)-0.5)
+                    dx, dy = K * ((cx / width) - 0.5), K * ((cy / height) - 0.5)
                     # allowed values between -2 and 2
                     # Sensible values between -1.5 and 1.5
                     if -1.5 < yaw_position - dx < 1.5:
@@ -251,11 +261,12 @@ class MyRobot(Robot):
                     if -0.4 < pitch_position + dy < 0.3:
                         pitch_position = pitch_position + dy
                         self.head_pitch.setPosition(float((pitch_position)))
-                        #self.rightS_pitch.setPosition(float(
-                        #self.startMotion(self.handWave)
+                        # self.rightS_pitch.setPosition(float(
+                        # self.startMotion(self.handWave)
 
 
-robot = MyRobot(ext_camera_flag=False)
-robot.run_keyboard()
+robot = MyRobot(ext_camera_flag=True)
+# robot.run_keyboard()
 robot.run_face_follower()
-robot.run_ball_follower()
+# robot.run_ball_follower()
+robot.run_greetings()
