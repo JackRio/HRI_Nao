@@ -5,7 +5,6 @@
 from controller import Robot, Keyboard, Display, Motion, DistanceSensor
 import numpy as np
 import cv2
-import time
 
 
 class MyRobot(Robot):
@@ -49,8 +48,6 @@ class MyRobot(Robot):
         self.rightS_roll.setPosition(float('inf'))
         self.rightS_roll.setVelocity(0)
 
-        # self.motion = None
-
         # Face Movement
         self.face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
@@ -58,10 +55,11 @@ class MyRobot(Robot):
         self.keyboard.enable(self.timeStep)
         self.keyboard = self.getKeyboard()
 
-        self.currentlyPlaying = False
+        self.motion = None
         self.loadMotionFiles()
 
     def loadMotionFiles(self):
+
         self.handWave = Motion('../../motions/HandWave.motion')
         self.forwards = Motion('../../motions/Forwards50.motion')
         self.backwards = Motion('../../motions/Backwards.motion')
@@ -70,15 +68,6 @@ class MyRobot(Robot):
         self.turnLeft60 = Motion('../../motions/TurnLeft60.motion')
         self.turnRight60 = Motion('../../motions/TurnRight60.motion')
         self.shoot = Motion('../../motions/Shoot.motion')
-
-    def startMotion(self, motion):
-        # interrupt current motion
-        if self.currentlyPlaying:
-            self.currentlyPlaying.stop()
-
-        # start new motion
-        motion.play()
-        self.currentlyPlaying = motion
 
     # Captures the external camera frames
     # Returns the image downsampled by 2
@@ -115,8 +104,15 @@ class MyRobot(Robot):
             ' Left Arrow to move head left\n'
             ' Right Arrow to move head left\n'
             ' S to Stop\n'
-            'E to exit\n'
+            ' E to exit\n'
         )
+
+    def startMotion(self, motion):
+        # start new motion
+        if self.motion:
+            self.motion.stop()
+        motion.play()
+        self.motion = motion
 
     def run_keyboard(self):
 
@@ -138,19 +134,20 @@ class MyRobot(Robot):
             elif k == Keyboard.DOWN:
                 self.startMotion(self.backwards)
             elif k == Keyboard.LEFT:
+                self.head_yaw.setPosition(float('inf'))
                 self.head_yaw.setVelocity(-1)
             elif k == Keyboard.RIGHT:
+                self.head_yaw.setPosition(float('inf'))
                 self.head_yaw.setVelocity(1.0)
             elif k == ord('L'):
                 self.startMotion(self.turnLeft60)
             elif k == ord('R'):
                 self.startMotion(self.turnRight60)
             elif k == ord('S'):
-                if self.currentlyPlaying:
-                    self.currentlyPlaying.stop()
-                    self.currentlyPlaying = False
-
+                if self.motion:
+                    self.motion.stop()
                 self.head_yaw.setVelocity(0)
+
             elif k == ord("E"):
                 return
 
@@ -178,11 +175,13 @@ class MyRobot(Robot):
         elif y_mov < -0.67:
             y_mov = -0.67
 
-        self.motion = robot.getMotor('HeadYaw')
-        self.motion.setPosition(x_mov)
+        # self.motion = robot.getMotor('HeadYaw')
+        self.head_yaw.setVelocity(1)
+        self.head_yaw.setPosition(x_mov)
 
-        self.motion = robot.getMotor('HeadPitch')
-        self.motion.setPosition(y_mov)
+        # self.motion = robot.getMotor('HeadPitch')
+        self.head_pitch.setVelocity(1)
+        self.head_pitch.setPosition(y_mov)
 
     def run_face_follower(self):
         # main control loop: perform simulation steps of self.timeStep milliseconds
@@ -215,7 +214,7 @@ class MyRobot(Robot):
             faces = self.face_cascade.detectMultiScale(gray, 1.3, 5)
             self.image_to_display(img)
             for (x, y, w, h) in faces:
-                self.handWave.play()
+                self.startMotion(self.shoot)
 
     def run_ball_follower(self):
 
@@ -267,7 +266,7 @@ class MyRobot(Robot):
 
 
 robot = MyRobot(ext_camera_flag=True)
-robot.run_keyboard()
+# robot.run_keyboard()
 robot.run_face_follower()
 # robot.run_ball_follower()
 robot.run_greetings()
