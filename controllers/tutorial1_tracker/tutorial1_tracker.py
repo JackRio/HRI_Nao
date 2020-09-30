@@ -216,7 +216,63 @@ class MyRobot(Robot):
             for (x, y, w, h) in faces:
                 self.startMotion(self.shoot)
 
-    def run_ball_follower(self):
+    def detect_ball(self):
+       
+       img = self.cameraBottom.getImage()
+       height = self.cameraBottom.getHeight()
+       width = self.cameraBottom.getWidth()
+       # turn into np array
+       image = np.frombuffer(img, np.uint8).reshape( height, width,4)
+       # transform into HSV 
+       image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+       image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+       # green is defined as tripels between these values
+       lower =  np.array([40,100,100])
+       upper = np.array([80,255,255])
+       # lay a mask over all green values   
+       mask = cv2.inRange(image, lower, upper)
+       # Image preparation       
+       #Erosion
+       kernel = np.ones((2,2),np.uint8)
+       image = cv2.erode(mask,kernel,iterations = 1)
+       #Dilation 
+       image= cv2.dilate(image,kernel,iterations = 1)
+       # find ball contour
+       contour, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE )
+       if len(contour) != 0:
+               contour = np.asarray(contour[0])
+               m = cv2.moments(contour)
+               # if area of detected blob is reasonable: 
+               if 500 > m["m00"] > 1:
+                   # calculate momentum
+                   cx, cy = int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"])   
+                   return(cx,cy)  
+               else:
+                   return (None,None)
+                   
+       yaw_position = 0
+       pitch_position = 0
+       self.head_yaw.setVelocity(3)
+       self.head_pitch.setVelocity(3)
+
+       while self.step(self.timeStep) != -1:
+          
+            x, y = self.detect_ball()
+            if x is None:
+                continue
+            else:
+                K = 0.2
+                dx, dy =K*((x/width)-0.5), K*((y/height)-0.5)
+                if -1.5 < yaw_position - dx < 1.5: 
+                    yaw_position = yaw_position - dx 
+                    self.head_yaw.setPosition(float(yaw_position))
+                if -0.4 < pitch_position + dy < 0.3: 
+                    pitch_position = pitch_position + dy 
+                    self.head_pitch.setPosition(float((pitch_position)))      
+        
+       return (None,None)
+    
+    """def run_ball_follower(self):
 
         yaw_position = 0
         pitch_position = 0
@@ -224,49 +280,25 @@ class MyRobot(Robot):
         self.head_pitch.setVelocity(6.5)
 
         while self.step(self.timeStep) != -1:
-            img = self.cameraBottom.getImage()
-            height, width = self.cameraBottom.getHeight(), self.cameraBottom.getWidth()
-            image = np.frombuffer(img, np.uint8).reshape(height, width, 4)
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-            lower = np.array([40, 100, 100])
-            upper = np.array([80, 255, 255])
-            # mask green values
-            mask = cv2.inRange(image, lower, upper)
-
-            # Erosion
-            kernel = np.ones((2, 2), np.uint8)
-            image = cv2.erode(mask, kernel, iterations=1)
-            # Dilation
-            image = cv2.dilate(image, kernel, iterations=1)
-            # find ball contour
-            contour, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if len(contour) != 0:
-                contour = np.asarray(contour[0])
-                m = cv2.moments(contour)
-                # if area of detected blob is reasonable:
-                if 500 > m["m00"] > 1:
-                    # calculate momentum
-                    cx, cy = int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"])
-                    # calculate movemnet for yaw and pitch
-                    K = 0.2
-                    dx, dy = K * ((cx / width) - 0.5), K * ((cy / height) - 0.5)
-                    # allowed values between -2 and 2
-                    # Sensible values between -1.5 and 1.5
-                    if -1.5 < yaw_position - dx < 1.5:
-                        yaw_position = yaw_position - dx
-                        self.head_yaw.setPosition(float(yaw_position))
-                    # allowed values between -0,6 and 0.5
-                    # Sensible values between -0.4 and 0.3
-                    if -0.4 < pitch_position + dy < 0.3:
-                        pitch_position = pitch_position + dy
-                        self.head_pitch.setPosition(float((pitch_position)))
-                        # self.rightS_pitch.setPosition(float(
-                        # self.startMotion(self.handWave)
-
+          
+            x, y = self.detect_ball()
+            if x is None:
+                continue
+            else:
+                K = 0.2
+                dx, dy =K*((x/width)-0.5), K*((y/height)-0.5)
+                if -1.5 < yaw_position - dx < 1.5: 
+                    yaw_position = yaw_position - dx 
+                    self.head_yaw.setPosition(float(yaw_position))
+                if -0.4 < pitch_position + dy < 0.3: 
+                    pitch_position = pitch_position + dy 
+                    self.head_pitch.setPosition(float((pitch_position)))"""
+                    
+            
 
 robot = MyRobot(ext_camera_flag=True)
 # robot.run_keyboard()
-robot.run_face_follower()
-# robot.run_ball_follower()
+#robot.run_face_follower()
+#robot.run_ball_follower()
+robot.detect_ball()
 robot.run_greetings()
