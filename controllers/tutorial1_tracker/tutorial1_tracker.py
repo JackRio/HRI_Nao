@@ -252,49 +252,47 @@ class MyRobot(Robot):
                    
        yaw_position = 0
        pitch_position = 0
-       self.head_yaw.setVelocity(3)
-       self.head_pitch.setVelocity(3)
+       self.head_yaw.setPosition(float('inf'))
+       self.head_pitch.setPosition(float('inf'))
+       self.head_yaw.setVelocity(1)
+       self.head_pitch.setVelocity(1)
 
        while self.step(self.timeStep) != -1:
           
             x, y = self.detect_ball()
+
             if x is None:
                 continue
             else:
                 K = 0.2
                 dx, dy =K*((x/width)-0.5), K*((y/height)-0.5)
-                if -1.5 < yaw_position - dx < 1.5: 
-                    yaw_position = yaw_position - dx 
-                    self.head_yaw.setPosition(float(yaw_position))
-                if -0.4 < pitch_position + dy < 0.3: 
-                    pitch_position = pitch_position + dy 
-                    self.head_pitch.setPosition(float((pitch_position)))      
-        
+                print(yaw_position - dx, pitch_position + dy)
+                yaw_position = yaw_position - dx 
+                pitch_position = pitch_position + dy
+                
+                if yaw_position > 1.8:
+                    yaw_position = 1.8
+                  
+                elif yaw_position < -1.8:
+                    yaw_position = -1.8
+                                 
+                 
+                
+                if pitch_position > 0.5:
+                    pitch_position = 0.5
+                   
+                elif pitch_position < -0.5:
+                    pitch_position = -0.5
+                    
+               
+                
+                
+                self.head_yaw.setPosition(float(yaw_position))
+                self.head_pitch.setPosition(float((pitch_position)))     
+                              
+      
        return (None,None)
     
-    """def run_ball_follower(self):
-
-        yaw_position = 0
-        pitch_position = 0
-        self.head_yaw.setVelocity(6.5)
-        self.head_pitch.setVelocity(6.5)
-
-        while self.step(self.timeStep) != -1:
-          
-            x, y = self.detect_ball()
-            if x is None:
-                continue
-            else:
-                K = 0.2
-                dx, dy =K*((x/width)-0.5), K*((y/height)-0.5)
-                if -1.5 < yaw_position - dx < 1.5: 
-                    yaw_position = yaw_position - dx 
-                    self.head_yaw.setPosition(float(yaw_position))
-                if -0.4 < pitch_position + dy < 0.3: 
-                    pitch_position = pitch_position + dy 
-                    self.head_pitch.setPosition(float((pitch_position)))"""
-                    
-            
 
 robot = MyRobot(ext_camera_flag=True)
 # robot.run_keyboard()
