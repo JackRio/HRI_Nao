@@ -323,8 +323,6 @@ class MyRobot(Robot):
     def run_ball_folower(self):
         """
             Nao bot tracks the green ball using the bottom camera.
-        :return:
-        :rtype:
         """
         height, width = self.cameraBottom.getHeight(), self.cameraBottom.getWidth()
         yaw_position = 0
