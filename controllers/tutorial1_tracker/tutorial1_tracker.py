@@ -88,7 +88,6 @@ class MyRobot(Robot):
             # Our operations on the frame come here
             img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # From openCV BGR to RGB
             img = cv2.resize(img, None, fx=0.5, fy=0.5)  # image downsampled by 2
-            print(type(img))
         return img
 
     # Displays the image on the webots camera display interface
@@ -109,11 +108,17 @@ class MyRobot(Robot):
             'Commands:\n'
             ' H for displaying the commands\n'
             ' G for print the gps\n'
+
             ' Up Arrow to move forward\n'
             ' Down Arrow to move backward\n'
             ' Left Arrow to move head left\n'
             ' Right Arrow to move head left\n'
             ' S to Stop\n'
+
+            ' F to run Face Follower\n'
+            ' B to run the Ball Tracker\n'
+            ' N to run the Greetings\n'
+
             ' E to exit\n'
         )
 
@@ -161,20 +166,25 @@ class MyRobot(Robot):
                 if self.motion:
                     self.motion.stop()
                 self.head_yaw.setVelocity(0)
+            elif k == ord('F'):
+                robot.run_face_follower()
+            elif k == ord('B'):
+                print("Press Q to exit Ball Tracker mode")
+                robot.detect_ball()
+                print("Ball Tracker mode exited\n"
+                      "Press H for menu")
+            elif k == ord('N'):
+                robot.run_greetings()
 
             elif k == ord("E"):
+                if self.ext_camera:
+                    self.cameraExt.release()
                 return
 
             # Perform a simulation step, quit the loop when
             # Webots is about to quit.
             if self.step(self.timeStep) == -1:
                 break
-
-        # finallize class. Destroy external camera.
-        if self.ext_camera:
-            self.cameraExt.release()
-
-            # Face following main function
 
     def look_at(self, x, y):
         """
@@ -216,7 +226,15 @@ class MyRobot(Robot):
 
         # main control loop: perform simulation steps of self.timeStep milliseconds
         # and leave the loop when the simulation is over
+
+        print("Press Q to exit Face Follower mode")
         while self.step(self.timeStep) != -1:
+            self.keyboard = self.getKeyboard()
+            k = self.keyboard.getKey()
+            if k == ord("Q"):
+                print("Face Follower mode exited\n"
+                      "Press H for menu")
+                return True
 
             img = self.camera_read_external()
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -229,19 +247,18 @@ class MyRobot(Robot):
                 self.look_at(x + h_half, y + w_half)
             self.image_to_display(img)
 
-        # finalize class. Destroy external camera.
-        if self.ext_camera:
-            self.cameraExt.release()
-
-        # create the Robot instance and run the controller
-
     def run_greetings(self):
         """
             Plays a random movement if the bot detects a face or a ball in the internal or external camera.
         """
-
+        print("Press Q to Greetings mode")
         while self.step(self.timeStep) != -1:
-
+            self.keyboard = self.getKeyboard()
+            k = self.keyboard.getKey()
+            if k == ord("Q"):
+                print("Greetings mode exited\n"
+                      "Press H for menu")
+                return True
             img = self.camera_read_external()
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             faces = self.face_cascade.detectMultiScale(gray, 1.3, 5)
@@ -295,7 +312,9 @@ class MyRobot(Robot):
         self.head_pitch.setVelocity(1)
 
         while self.step(self.timeStep) != -1:
-
+            k = self.keyboard.getKey()
+            if k == ord("Q"):
+                return None, None
             x, y = self.detect_ball()
 
             if x is None:
@@ -303,7 +322,6 @@ class MyRobot(Robot):
             else:
                 K = 0.2
                 dx, dy = K * ((x / width) - 0.5), K * ((y / height) - 0.5)
-                print(yaw_position - dx, pitch_position + dy)
                 yaw_position = yaw_position - dx
                 pitch_position = pitch_position + dy
 
@@ -326,8 +344,4 @@ class MyRobot(Robot):
 
 
 robot = MyRobot(ext_camera_flag=True)
-# robot.run_keyboard()
-# robot.run_face_follower()
-# robot.run_ball_follower()
-# robot.detect_ball()
-robot.run_greetings()
+robot.run_keyboard()
