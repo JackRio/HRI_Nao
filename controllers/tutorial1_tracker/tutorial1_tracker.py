@@ -3,7 +3,7 @@ HRI with the humanoid robot Nao"""
 
 # You may need to import some classes of the controller module. Ex:
 #  from controller import Robot, Motor, DistanceSensor
-from controller import Robot, Keyboard, Display, Motion, DistanceSensor
+from controller import Robot, Keyboard, Display, Motion
 import numpy as np
 import cv2
 
