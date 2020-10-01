@@ -1,4 +1,5 @@
-"""tutorial1_tracker controller."""
+"""Tutorial 1: : The goal of this tutorial is to get familiar with the environment and program a first example of
+HRI with the humanoid robot Nao"""
 
 # You may need to import some classes of the controller module. Ex:
 #  from controller import Robot, Motor, DistanceSensor
@@ -59,6 +60,9 @@ class MyRobot(Robot):
         self.loadMotionFiles()
 
     def loadMotionFiles(self):
+        """
+            Loading the pre-defined motions for the robot
+        """
 
         self.handWave = Motion('../../motions/HandWave.motion')
         self.forwards = Motion('../../motions/Forwards50.motion')
@@ -72,6 +76,11 @@ class MyRobot(Robot):
     # Captures the external camera frames
     # Returns the image downsampled by 2
     def camera_read_external(self):
+        """
+            Use the external camera and captures the image.
+        :return: img
+        :rtype: numpy.ndarray()
+        """
         img = []
         if self.ext_camera:
             # Capture frame-by-frame
@@ -79,7 +88,7 @@ class MyRobot(Robot):
             # Our operations on the frame come here
             img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # From openCV BGR to RGB
             img = cv2.resize(img, None, fx=0.5, fy=0.5)  # image downsampled by 2
-
+            print(type(img))
         return img
 
     # Displays the image on the webots camera display interface
@@ -94,7 +103,8 @@ class MyRobot(Robot):
         print('----------gps----------')
         print(' [x y z] =  [' + str(gps_data[0]) + ',' + str(gps_data[1]) + ',' + str(gps_data[2]) + ']')
 
-    def printHelp(self):
+    @staticmethod
+    def printHelp():
         print(
             'Commands:\n'
             ' H for displaying the commands\n'
@@ -108,22 +118,26 @@ class MyRobot(Robot):
         )
 
     def startMotion(self, motion):
-        # start new motion
+        """
+            Starts the motion and if any previous motion is on stops it before starting a new motion
+        :param motion: Class variable
+        :type motion: Motion
+        """
         if self.motion:
             self.motion.stop()
         motion.play()
         self.motion = motion
 
     def run_keyboard(self):
-
+        """
+            Takes the input from the keyboard and runs the required module
+        """
         self.printHelp()
-        previous_message = ''
 
         # Main loop.
         while True:
             # Deal with the pressed keyboard key.
             k = self.keyboard.getKey()
-            message = ''
             if k == ord('G'):
                 self.print_gps()
             elif k == ord('H'):
@@ -163,6 +177,17 @@ class MyRobot(Robot):
             # Face following main function
 
     def look_at(self, x, y):
+        """
+            Translate the point so that the bot follows the face. Takes 2 co-ordinates and positions the bot head
+            so it mimics the moment of the face.
+            It sets the head movement position by accessing the motor through the head_yaw and head_pitch class
+            variable
+
+        :param x: x co-ordinate
+        :type x: float()
+        :param y: y co-ordinate
+        :type y: float()
+        """
         x_mov = float((x / 270) - 0.5) * 2
         y_mov = float((y / 270) - 0.5) * 2
         if x_mov > 2.09:
@@ -184,6 +209,11 @@ class MyRobot(Robot):
         self.head_pitch.setPosition(y_mov)
 
     def run_face_follower(self):
+        """
+            Using the Haar Cascades classifier detects the face through the external camera and translate the bot head
+            movement based on the position of the face in the frame.
+        """
+
         # main control loop: perform simulation steps of self.timeStep milliseconds
         # and leave the loop when the simulation is over
         while self.step(self.timeStep) != -1:
@@ -199,13 +229,16 @@ class MyRobot(Robot):
                 self.look_at(x + h_half, y + w_half)
             self.image_to_display(img)
 
-        # finallize class. Destroy external camera.
+        # finalize class. Destroy external camera.
         if self.ext_camera:
             self.cameraExt.release()
 
         # create the Robot instance and run the controller
 
     def run_greetings(self):
+        """
+            Plays a random movement if the bot detects a face or a ball in the internal or external camera.
+        """
 
         while self.step(self.timeStep) != -1:
 
@@ -217,86 +250,84 @@ class MyRobot(Robot):
                 self.startMotion(self.shoot)
 
     def detect_ball(self):
-       
-       img = self.cameraBottom.getImage()
-       height = self.cameraBottom.getHeight()
-       width = self.cameraBottom.getWidth()
-       # turn into np array
-       image = np.frombuffer(img, np.uint8).reshape( height, width,4)
-       # transform into HSV 
-       image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-       image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-       # green is defined as tripels between these values
-       lower =  np.array([40,100,100])
-       upper = np.array([80,255,255])
-       # lay a mask over all green values   
-       mask = cv2.inRange(image, lower, upper)
-       # Image preparation       
-       #Erosion
-       kernel = np.ones((2,2),np.uint8)
-       image = cv2.erode(mask,kernel,iterations = 1)
-       #Dilation 
-       image= cv2.dilate(image,kernel,iterations = 1)
-       # find ball contour
-       contour, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE )
-       if len(contour) != 0:
-               contour = np.asarray(contour[0])
-               m = cv2.moments(contour)
-               # if area of detected blob is reasonable: 
-               if 500 > m["m00"] > 1:
-                   # calculate momentum
-                   cx, cy = int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"])   
-                   return(cx,cy)  
-               else:
-                   return (None,None)
-                   
-       yaw_position = 0
-       pitch_position = 0
-       self.head_yaw.setPosition(float('inf'))
-       self.head_pitch.setPosition(float('inf'))
-       self.head_yaw.setVelocity(1)
-       self.head_pitch.setVelocity(1)
+        """
+            Detects the ball through the internal camera and sets the position of the motors in the head to track the
+            movement of the ball. The motors are set to position control and runs with an velocity of 1.
+        """
 
-       while self.step(self.timeStep) != -1:
-          
+        img = self.cameraBottom.getImage()
+        height = self.cameraBottom.getHeight()
+        width = self.cameraBottom.getWidth()
+        # turn into np array
+        image = np.frombuffer(img, np.uint8).reshape(height, width, 4)
+        # transform into HSV
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        # green is defined as tripels between these values
+        lower = np.array([40, 100, 100])
+        upper = np.array([80, 255, 255])
+        # lay a mask over all green values
+        mask = cv2.inRange(image, lower, upper)
+        # Image preparation
+        # Erosion
+        kernel = np.ones((2, 2), np.uint8)
+        image = cv2.erode(mask, kernel, iterations=1)
+        # Dilation
+        image = cv2.dilate(image, kernel, iterations=1)
+        # find ball contour
+        contour, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if len(contour) != 0:
+            contour = np.asarray(contour[0])
+            m = cv2.moments(contour)
+            # if area of detected blob is reasonable:
+            if 500 > m["m00"] > 1:
+                # calculate momentum
+                cx, cy = int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"])
+                return cx, cy
+            else:
+                return None, None
+
+        yaw_position = 0
+        pitch_position = 0
+        self.head_yaw.setPosition(float('inf'))
+        self.head_pitch.setPosition(float('inf'))
+        self.head_yaw.setVelocity(1)
+        self.head_pitch.setVelocity(1)
+
+        while self.step(self.timeStep) != -1:
+
             x, y = self.detect_ball()
 
             if x is None:
                 continue
             else:
                 K = 0.2
-                dx, dy =K*((x/width)-0.5), K*((y/height)-0.5)
+                dx, dy = K * ((x / width) - 0.5), K * ((y / height) - 0.5)
                 print(yaw_position - dx, pitch_position + dy)
-                yaw_position = yaw_position - dx 
+                yaw_position = yaw_position - dx
                 pitch_position = pitch_position + dy
-                
+
                 if yaw_position > 1.8:
                     yaw_position = 1.8
-                  
+
                 elif yaw_position < -1.8:
                     yaw_position = -1.8
-                                 
-                 
-                
+
                 if pitch_position > 0.5:
                     pitch_position = 0.5
-                   
+
                 elif pitch_position < -0.5:
                     pitch_position = -0.5
-                    
-               
-                
-                
+
                 self.head_yaw.setPosition(float(yaw_position))
-                self.head_pitch.setPosition(float((pitch_position)))     
-                              
-      
-       return (None,None)
-    
+                self.head_pitch.setPosition(float(pitch_position))
+
+        return None, None
+
 
 robot = MyRobot(ext_camera_flag=True)
 # robot.run_keyboard()
-#robot.run_face_follower()
-#robot.run_ball_follower()
-robot.detect_ball()
+# robot.run_face_follower()
+# robot.run_ball_follower()
+# robot.detect_ball()
 robot.run_greetings()
