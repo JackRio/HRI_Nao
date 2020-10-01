@@ -73,6 +73,20 @@ class MyRobot(Robot):
         self.turnRight60 = Motion('../../motions/TurnRight60.motion')
         self.shoot = Motion('../../motions/Shoot.motion')
 
+    def unloadMotionFiles(self):
+        """
+            Loading the pre-defined motions for the robot
+        """
+
+        self.handWave = None
+        self.forwards = None
+        self.backwards = None
+        self.sideStepLeft = None
+        self.sideStepRight = None
+        self.turnLeft60 = None
+        self.turnRight60 = None
+        self.shoot = None
+
     # Captures the external camera frames
     # Returns the image downsampled by 2
     def camera_read_external(self):
@@ -177,6 +191,7 @@ class MyRobot(Robot):
                 robot.run_greetings()
 
             elif k == ord("E"):
+                self.unloadMotionFiles()
                 if self.ext_camera:
                     self.cameraExt.release()
                 return
