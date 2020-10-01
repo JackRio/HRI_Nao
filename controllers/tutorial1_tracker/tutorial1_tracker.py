@@ -184,7 +184,7 @@ class MyRobot(Robot):
                 robot.run_face_follower()
             elif k == ord('B'):
                 print("Press Q to exit Ball Tracker mode")
-                robot.detect_ball()
+                robot.run_ball_folower()
                 print("Ball Tracker mode exited\n"
                       "Press H for menu")
             elif k == ord('N'):
@@ -318,44 +318,57 @@ class MyRobot(Robot):
                 return cx, cy
             else:
                 return None, None
-
-        yaw_position = 0
-        pitch_position = 0
-        self.head_yaw.setPosition(float('inf'))
-        self.head_pitch.setPosition(float('inf'))
-        self.head_yaw.setVelocity(1)
-        self.head_pitch.setVelocity(1)
-
-        while self.step(self.timeStep) != -1:
-            k = self.keyboard.getKey()
-            if k == ord("Q"):
-                return None, None
-            x, y = self.detect_ball()
-
-            if x is None:
-                continue
-            else:
-                K = 0.2
-                dx, dy = K * ((x / width) - 0.5), K * ((y / height) - 0.5)
-                yaw_position = yaw_position - dx
-                pitch_position = pitch_position + dy
-
-                if yaw_position > 1.8:
-                    yaw_position = 1.8
-
-                elif yaw_position < -1.8:
-                    yaw_position = -1.8
-
-                if pitch_position > 0.5:
-                    pitch_position = 0.5
-
-                elif pitch_position < -0.5:
-                    pitch_position = -0.5
-
-                self.head_yaw.setPosition(float(yaw_position))
-                self.head_pitch.setPosition(float(pitch_position))
-
         return None, None
+        
+        def run_ball_folower(self):
+        
+            height, width = self.cameraBottom.getHeight(), self.cameraBottom.getWidth()    
+            yaw_position = 0
+            pitch_position = 0
+            #self.head_yaw.setPosition(float('inf'))
+            #self.head_pitch.setPosition(float('inf'))
+            self.head_yaw.setVelocity(1)
+            self.head_pitch.setVelocity(1)
+
+            while self.step(self.timeStep) != -1:
+                k = self.keyboard.getKey()
+                if k == ord("Q"):
+                    return None, None
+                x, y = self.detect_ball()
+
+                if x is None:
+                    continue
+                else:
+                    K = 0.2
+                    dx, dy = K * ((x / width) - 0.5), K * ((y / height) - 0.5)
+                    if -1.5 < yaw_position - dx < 1.5: 
+                    yaw_position = yaw_position - dx 
+                    self.head_yaw.setPosition(float(yaw_position))
+                    # allowed values between -0,6 and 0.5
+                    # Sensible values between -0.4 and 0.3
+                    if -0.4 < pitch_position + dy < 0.3: 
+                    pitch_position = pitch_position + dy 
+                    self.head_pitch.setPosition(float((pitch_position)))
+                    
+                   """ yaw_position = yaw_position - dx
+                    pitch_position = pitch_position + dy
+
+                    if yaw_position > 1.8:
+                        yaw_position = 1.8
+
+                    elif yaw_position < -1.8:
+                        yaw_position = -1.8
+
+                    if pitch_position > 0.5:
+                        pitch_position = 0.5
+
+                    elif pitch_position < -0.5:
+                        pitch_position = -0.5
+
+                    self.head_yaw.setPosition(float(yaw_position))
+                    self.head_pitch.setPosition(float(pitch_position))"""
+
+        
 
 
 robot = MyRobot(ext_camera_flag=True)
